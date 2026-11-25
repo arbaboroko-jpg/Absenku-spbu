@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Absenku - SPBU 74.957.10</title>
+  <!-- Konfigurasi Aplikasi Android (PWA & Mobile Web App) -->
+  <meta name="theme-color" content="#1e3a8a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="application-name" content="Absenku SPBU">
+  <link id="pwaManifestLink" rel="manifest">
+  <link id="pwaAppIconLink" rel="icon" type="image/svg+xml">
+  <link id="pwaAppleIconLink" rel="apple-touch-icon">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .view-transition {
+      animation: fadeSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-slate-100">
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ======================================================================= -->
+  <!-- VIEW 1: MODE KARYAWAN (DEFAULT - ISI ABSEN & REKAP KEHADIRAN PRIBADI)   -->
+  <!-- ======================================================================= -->
+  <div id="employeeView" class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 shadow-xl border-x border-slate-200/70">
+
+    <!-- Header Karyawan -->
+    <header class="bg-gradient-to-br from-blue-950 via-blue-900 to-rose-700 text-white px-5 pt-5 pb-6 rounded-b-3xl shadow-md">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-inner shrink-0">
+            <i class="fa-solid fa-gas-pump text-rose-300 text-xl"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-1.5">
+              <h1 class="text-lg font-extrabold tracking-tight leading-none">Absenku</h1>
+              <span class="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Live</span>
+            </div>
+            <p class="text-xs text-blue-100 font-semibold mt-1">SPBU 74.957.10 • Portal Karyawan</p>
+          </div>
+        </div>
+
+        <!-- Tombol Masuk Portal Admin -->
+        <button type="button" onclick="bukaModalLoginAdmin()"
+          class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[11px] font-bold flex items-center space-x-1.5 transition shrink-0">
+          <i class="fa-solid fa-shield-halved text-amber-300"></i>
+          <span>Admin</span>
+        </button>
+      </div>
+
+      <!-- Bar Jam Digital WITA Real-time -->
+      <div class="mt-4 bg-slate-950/35 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/15 flex items-center justify-between">
+        <div class="flex items-center space-x-2 text-xs text-blue-100">
+          <i class="fa-regular fa-calendar-check text-rose-300"></i>
+          <span id="empLiveDate" class="font-medium">Memuat tanggal...</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span id="empLiveClock" class="font-mono text-sm font-bold text-white tracking-wider">00:00:00</span>
+          <span class="text-[10px] font-extrabold bg-blue-600/80 text-white px-1.5 py-0.5 rounded">WITA</span>
+        </div>
+      </div>
+
+      <!-- Navigasi Sub-Menu Karyawan: Isi Absen vs Rekap Pribadi -->
+      <div class="grid grid-cols-2 gap-1.5 mt-4 bg-slate-950/35 p-1 rounded-2xl border border-white/15">
+        <button type="button" id="empNavBtn-absen" onclick="switchEmployeeSubTab('absen')"
+          class="py-2 px-3 rounded-xl bg-white text-blue-950 font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition">
+          <i class="fa-solid fa-fingerprint text-rose-600"></i>
+          <span>Isi Absen</span>
+        </button>
+        <button type="button" id="empNavBtn-rekap" onclick="switchEmployeeSubTab('rekap')"
+          class="py-2 px-3 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-user-clock"></i>
+          <span>Rekap Saya</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Form Area -->
+    <main class="flex-1 px-4 py-5 flex flex-col justify-between">
+
+      <!-- WRAPPER SUB-TAB 1: FORM ABSENSI KARYAWAN -->
+      <div id="empSubView-absen" class="space-y-4">
+        <div id="employeeFormCard" class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 space-y-5">
+
+          <!-- Input Tanggal & Nama Lengkap Karyawan -->
+          <div class="space-y-3.5 border-b border-slate-100 pb-4">
+            <div>
+              <label for="inputTanggal" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                <i class="fa-regular fa-calendar mr-1.5 text-blue-600"></i>Tanggal Bertugas
+              </label>
+              <input type="date" id="inputTanggal"
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+
+            <div>
+              <label for="inputNama" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                <i class="fa-solid fa-user mr-1.5 text-blue-600"></i>Nama Lengkap Karyawan
+              </label>
+              <div class="relative">
+                <input type="text" id="inputNama" oninput="sinkronHighlightChipNama()" autocomplete="off"
+                  placeholder="Ketik atau klik nama Anda di bawah..."
+                  class="w-full px-4 py-3 pr-10 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <button type="button" onclick="bersihkanInputNama()" title="Hapus nama"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                  <i class="fa-solid fa-circle-xmark text-sm"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daftar Nama Cepat (Quick Chips) -->
+          <div class="border-b border-slate-100 pb-4">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[11px] font-bold text-slate-500 flex items-center">
+                <i class="fa-solid fa-bolt text-amber-500 mr-1"></i>Pilih Cepat Nama Karyawan:
+              </span>
+              <span id="badgeJumlahChipKaryawan" class="text-[10px] font-semibold text-slate-400">0 nama</span>
+            </div>
+            <div id="employeeQuickChipsContainer" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-0.5">
+              <!-- Diisi dinamis oleh renderQuickChipsKaryawan() -->
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1.5">
+              Klik chip nama di atas untuk mengisi otomatis, atau ketik manual.
+            </p>
+          </div>
+
+          <!-- Verifikasi PIN Pribadi Karyawan -->
+          <div id="employeePinBox" class="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label for="inputEmployeePin" class="text-xs font-extrabold text-blue-950 flex items-center">
+                <i class="fa-solid fa-key text-amber-600 mr-1.5"></i>PIN Pribadi Karyawan
+              </label>
+              <span id="employeePinStatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                Wajib Verifikasi
+              </span>
+            </div>
+            <input type="password" inputmode="numeric" id="inputEmployeePin" maxlength="8" autocomplete="off"
+              placeholder="Masukkan 4-6 angka PIN Anda..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-blue-200 text-slate-900 font-mono font-extrabold tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <p id="employeePinHint" class="text-[11px] text-slate-500">
+              Mencegah rekan kerja lain mengisi absen atas nama Anda.
+            </p>
+          </div>
+
+          <!-- Pilihan Kartu Shift -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+              <i class="fa-solid fa-clock mr-1.5 text-rose-600"></i>Pilih Shift Tugas
+            </label>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button type="button" data-shift="Shift 1" onclick="pilihShift('Shift 1')"
+                class="shift-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-sun"></i>
+                  </span>
+                  <i class="shift-check fa-solid fa-circle-check text-blue-600 text-base opacity-0 transition-opacity"></i>
+                </div>
+                <p class="font-extrabold text-sm text-slate-800">Shift 1</p>
+                <p class="text-[11px] text-slate-500 font-medium">Pagi • 06:00 - 14:00</p>
+              </button>
+
+              <button type="button" data-shift="Shift 2" onclick="pilihShift('Shift 2')"
+                class="shift-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="w-7 h-7 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-cloud-sun"></i>
+                  </span>
+                  <i class="shift-check fa-solid fa-circle-check text-blue-600 text-base opacity-0 transition-opacity"></i>
+                </div>
+                <p class="font-extrabold text-sm text-slate-800">Shift 2</p>
+                <p class="text-[11px] text-slate-500 font-medium">Siang • 14:00 - 22:00</p>
+              </button>
+
+              <button type="button" data-shift="Shift 3" onclick="pilihShift('Shift 3')"
+                class="shift-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-moon"></i>
+                  </span>
+                  <i class="shift-check fa-solid fa-circle-check text-blue-600 text-base opacity-0 transition-opacity"></i>
+                </div>
+                <p class="font-extrabold text-sm text-slate-800">Shift 3</p>
+                <p class="text-[11px] text-slate-500 font-medium">Malam • 22:00 - 06:00</p>
+              </button>
+
+              <button type="button" data-shift="Shift Off" onclick="pilihShift('Shift Off')"
+                class="shift-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-rose-400 transition-all">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-mug-hot"></i>
+                  </span>
+                  <i class="shift-check fa-solid fa-circle-check text-rose-600 text-base opacity-0 transition-opacity"></i>
+                </div>
+                <p class="font-extrabold text-sm text-slate-800">Shift Off</p>
+                <p class="text-[11px] text-slate-500 font-medium">Jadwal Libur / Off</p>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tombol Utama Simpan Absen -->
+          <button type="button" id="btnSimpanAbsen" onclick="simpanAbsen()"
+            class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-800 to-rose-600 hover:from-blue-900 hover:to-rose-700 text-white font-extrabold text-base shadow-lg shadow-blue-900/25 flex items-center justify-center space-x-2.5 transition-all active:scale-[0.98]">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Simpan Absen</span>
+          </button>
+        </div>
+
+        <!-- LAYAR KONFIRMASI SUKSES (MUNCUL SETELAH ABSEN DISIMPAN) -->
+        <div id="employeeSuccessCard" class="hidden bg-white rounded-3xl p-6 shadow-md border border-emerald-200 text-center space-y-5 view-transition">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+
+          <div>
+            <span class="inline-block bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Bukti Kehadiran Tercatat</span>
+            <h2 class="text-lg font-extrabold text-slate-800 mt-2">Absensi Berhasil Disimpan!</h2>
+            <p id="successSyncNote" class="text-xs text-slate-500 mt-1">Data terkirim ke akun Admin SPBU 74.957.10</p>
+          </div>
+
+          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-left space-y-2.5 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-500">Nama Karyawan</span>
+              <span id="receiptNama" class="font-extrabold text-slate-800">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Tanggal Bertugas</span>
+              <span id="receiptTanggal" class="font-bold text-slate-800">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Pilihan Shift</span>
+              <span id="receiptShift" class="font-extrabold text-blue-700">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Waktu Input</span>
+              <span id="receiptJam" class="font-mono font-bold text-slate-700">-</span>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 pt-1">
+            <button type="button" onclick="isiAbsenLagi(true)"
+              class="w-full py-3.5 px-5 rounded-2xl bg-blue-800 hover:bg-blue-900 text-white font-bold text-sm shadow-md flex items-center justify-center space-x-2 transition active:scale-[0.98]">
+              <i class="fa-solid fa-rotate-right"></i>
+              <span>Isi Absen Lagi (Double Shift)</span>
+            </button>
+
+            <button type="button" onclick="bukaRekapDariKonfirmasi()"
+              class="w-full py-3 px-5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center space-x-2 transition">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Lihat Rekap Kehadiran Saya</span>
+            </button>
+
+            <button type="button" onclick="isiAbsenLagi(false)"
+              class="w-full py-3 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center space-x-2 transition">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Input Absen Rekan Kerja Lain</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- WRAPPER SUB-TAB 2: REKAP KEHADIRAN PRIBADI KARYAWAN -->
+      <div id="empSubView-rekap" class="hidden space-y-4 view-transition">
+
+        <!-- Kartu Verifikasi Identitas Pribadi -->
+        <div id="empPersonalAuthCard" class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+          <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center text-lg shrink-0">
+              <i class="fa-solid fa-id-card-clip"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-800">Cek Rekap Kehadiran Pribadi</h2>
+              <p class="text-[11px] text-slate-500">Pilih nama & masukkan PIN pribadi Anda untuk melihat catatan shift Anda.</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label for="rekapEmpNama" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Nama Karyawan
+              </label>
+              <input type="text" id="rekapEmpNama" autocomplete="off"
+                placeholder="Ketik atau pilih chip nama Anda..."
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <div id="rekapEmpChipsContainer" class="flex flex-wrap gap-1.5 mt-2 max-h-24 overflow-y-auto">
+                <!-- Diisi dinamis -->
+              </div>
+            </div>
+
+            <div>
+              <label for="rekapEmpPin" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                PIN Pribadi Anda
+              </label>
+              <input type="password" inputmode="numeric" id="rekapEmpPin" maxlength="8" autocomplete="off"
+                placeholder="Masukkan 4-6 digit PIN..."
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono font-extrabold tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+
+            <button type="button" onclick="verifikasiLihatRekapPribadi()"
+              class="w-full py-3.5 px-5 rounded-2xl bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-sm shadow-md flex items-center justify-center space-x-2 transition active:scale-[0.98]">
+              <i class="fa-solid fa-unlock-keyhole"></i>
+              <span>Buka Rekap Kehadiran Saya</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hasil Rekap Pribadi (Muncul Setelah PIN Pribadi Terverifikasi) -->
+        <div id="empPersonalResultBox" class="hidden space-y-4 view-transition">
+
+          <!-- Header Profil & Filter Bulan -->
+          <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div class="min-w-0">
+                <span class="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Terverifikasi</span>
+                <h3 id="personalRekapNamaTitle" class="text-base font-extrabold text-slate-800 truncate mt-0.5">-</h3>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="toggleFormGantiPinPribadi()"
+                  class="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold flex items-center space-x-1 transition">
+                  <i class="fa-solid fa-key text-amber-600"></i>
+                  <span>Ganti PIN</span>
+                </button>
+                <button type="button" onclick="kunciKembaliRekapPribadi()"
+                  class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center space-x-1 transition">
+                  <i class="fa-solid fa-lock text-rose-500"></i>
+                  <span>Tutup</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Panel Ubah PIN Pribadi Mandiri oleh Karyawan -->
+            <div id="personalChangePinBox" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 space-y-2.5 view-transition">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-extrabold text-amber-950">
+                  <i class="fa-solid fa-shield-halved text-amber-600 mr-1"></i>Ubah PIN Pribadi Saya
+                </p>
+                <button type="button" onclick="toggleFormGantiPinPribadi()" class="text-slate-400 hover:text-slate-600 text-xs">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-600">Buat PIN baru (4–8 angka) yang hanya Anda ketahui untuk absen & cek rekap.</p>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="password" inputmode="numeric" id="inputPersonalNewPin" maxlength="8" placeholder="PIN Baru (4-8 angka)"
+                  class="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <input type="password" inputmode="numeric" id="inputPersonalConfirmPin" maxlength="8" placeholder="Ulangi PIN Baru"
+                  class="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500">
+              </div>
+              <button type="button" onclick="simpanPinPribadiMandiri()"
+                class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold transition">
+                Simpan PIN Baru Saya
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bulan</label>
+                <select id="filterBulanPribadi" onchange="renderRekapPribadiKaryawan()"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <option value="01">Januari</option>
+                  <option value="02">Februari</option>
+                  <option value="03">Maret</option>
+                  <option value="04">April</option>
+                  <option value="05">Mei</option>
+                  <option value="06">Juni</option>
+                  <option value="07">Juli</option>
+                  <option value="08">Agustus</option>
+                  <option value="09">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">Desember</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Tahun</label>
+                <select id="filterTahunPribadi" onchange="renderRekapPribadiKaryawan()"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ringkasan Jumlah Shift Pribadi -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="col-span-2 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-sm">
+              <div>
+                <p class="text-xs font-extrabold text-white">Total Kehadiran Masuk Kerja</p>
+                <p class="text-[11px] text-blue-200 mt-0.5">Gabungan Shift 1 + Shift 2 + Shift 3</p>
+                <p id="personalTotalSemuaCatatan" class="text-[10px] text-amber-300 font-bold mt-1">Total keseluruhan jadwal (termasuk Off): 0</p>
+              </div>
+              <div class="text-right">
+                <p id="personalTotalMasuk" class="text-3xl font-extrabold leading-none">0</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-blue-200 mt-1">Total Shift</p>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-sun text-amber-500 mr-1.5"></i>Shift 1</span>
+              <span id="personalShift1" class="text-base font-extrabold text-slate-800">0</span>
+            </div>
+
+            <div class="bg-white rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-cloud-sun text-sky-500 mr-1.5"></i>Shift 2</span>
+              <span id="personalShift2" class="text-base font-extrabold text-slate-800">0</span>
+            </div>
+
+            <div class="bg-white rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-moon text-indigo-500 mr-1.5"></i>Shift 3</span>
+              <span id="personalShift3" class="text-base font-extrabold text-slate-800">0</span>
+            </div>
+
+            <div class="bg-white rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-mug-hot text-rose-500 mr-1.5"></i>Shift Off</span>
+              <span id="personalShiftOff" class="text-base font-extrabold text-rose-600">0</span>
+            </div>
+          </div>
+
+          <!-- Daftar Riwayat Shift Pribadi -->
+          <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Rincian Jadwal Shift Saya</h4>
+              <span id="personalJumlahCatatan" class="text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">0 catatan</span>
+            </div>
+            <div id="personalHistoryList" class="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+              <!-- Diisi dinamis oleh renderRekapPribadiKaryawan() -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer Diskret Karyawan -->
+      <footer class="pt-6 pb-2 text-center">
+        <p class="text-[11px] text-slate-400 font-medium">Terhubung ke Server Pusat Admin • SPBU 74.957.10</p>
+      </footer>
+    </main>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- VIEW 2: PORTAL ADMIN (REKAP BULANAN, RIWAYAT, DAFTAR PIN & SYNC CLOUD)  -->
+  <!-- ======================================================================= -->
+  <div id="adminView" class="hidden w-full max-w-5xl mx-auto min-h-screen flex flex-col bg-slate-100">
+
+    <!-- Header Portal Admin -->
+    <header class="bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white px-5 py-4 shadow-lg sticky top-0 z-30">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-shield-halved text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-base sm:text-lg font-extrabold tracking-tight">Portal Admin Absenku</h1>
+              <span class="bg-amber-500 text-slate-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">SPBU 74.957.10</span>
+            </div>
+            <p class="text-[11px] text-blue-200 mt-0.5">
+              <span id="adminLiveClock" class="font-mono font-bold text-white">00:00:00 WITA</span> • Pantauan Terpusat
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnRefreshCloudAdmin" onclick="tarikDataDariCloudAdmin(true)"
+            class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center space-x-1.5 shadow-sm transition">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <span>Tarik Data Sheet</span>
+          </button>
+          <button type="button" onclick="keluarModeAdmin()"
+            class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold flex items-center space-x-1.5 transition">
+            <i class="fa-solid fa-arrow-right-from-bracket text-rose-300"></i>
+            <span>Keluar Admin</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigasi Tab Admin -->
+      <nav class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mt-4 bg-white/10 p-1.5 rounded-2xl">
+        <button type="button" id="adminTabBtn-input" onclick="switchAdminTab('input')"
+          class="admin-tab-btn py-2.5 px-2.5 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-pen-to-square text-amber-300"></i>
+          <span>Input Absen</span>
+        </button>
+        <button type="button" id="adminTabBtn-rekap" onclick="switchAdminTab('rekap')"
+          class="admin-tab-btn py-2.5 px-2.5 rounded-xl bg-white text-blue-950 font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition">
+          <i class="fa-solid fa-table-list text-blue-700"></i>
+          <span>Rekap Bulanan</span>
+        </button>
+        <button type="button" id="adminTabBtn-riwayat" onclick="switchAdminTab('riwayat')"
+          class="admin-tab-btn py-2.5 px-2.5 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Log Riwayat</span>
+        </button>
+        <button type="button" id="adminTabBtn-karyawan" onclick="switchAdminTab('karyawan')"
+          class="admin-tab-btn py-2.5 px-2.5 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-users-gear"></i>
+          <span>Daftar & PIN</span>
+        </button>
+        <button type="button" id="adminTabBtn-pengaturan" onclick="switchAdminTab('pengaturan')"
+          class="admin-tab-btn py-2.5 px-2.5 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition relative">
+          <i class="fa-solid fa-server"></i>
+          <span>Server & PIN Admin</span>
+          <span id="badgePendingSync" class="hidden ml-1 px-1.5 py-0.2 bg-amber-400 text-slate-950 text-[10px] font-extrabold rounded-full">0</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Konten Utama Admin -->
+    <main class="flex-1 p-4 sm:p-6 space-y-5">
+
+      <!-- TAB ADMIN 0: INPUT ABSEN KARYAWAN OLEH ADMIN (TANPA PIN KARYAWAN) -->
+      <section id="adminSection-input" class="admin-section hidden space-y-4 view-transition">
+        <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-xs border border-slate-200/80 space-y-5 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg shrink-0">
+                <i class="fa-solid fa-user-check"></i>
+              </div>
+              <div>
+                <h2 class="text-sm sm:text-base font-extrabold text-slate-800">Input Kehadiran Karyawan (Mode Admin)</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Isi absensi karyawan lain tanpa perlu PIN pribadi karyawan • Mendukung Double Shift</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase">Akses Admin</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label for="adminInputTanggal" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                <i class="fa-regular fa-calendar mr-1.5 text-blue-600"></i>Tanggal Bertugas
+              </label>
+              <input type="date" id="adminInputTanggal"
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+
+            <div>
+              <label for="adminInputNama" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                <i class="fa-solid fa-user mr-1.5 text-blue-600"></i>Nama Karyawan
+              </label>
+              <input type="text" id="adminInputNama" oninput="sinkronHighlightChipAdmin()" autocomplete="off"
+                placeholder="Ketik atau klik chip nama di bawah..."
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+          </div>
+
+          <!-- Pilihan Cepat Nama Karyawan untuk Admin -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[11px] font-bold text-slate-500">
+                <i class="fa-solid fa-bolt text-amber-500 mr-1"></i>Klik Cepat Nama Karyawan:
+              </span>
+              <span class="text-[10px] text-slate-400">Bebas pilih atau ketik manual</span>
+            </div>
+            <div id="adminInputChipsContainer" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto"></div>
+          </div>
+
+          <!-- Pilihan Shift Admin -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+              <i class="fa-solid fa-clock mr-1.5 text-rose-600"></i>Pilih Shift Tugas
+            </label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <button type="button" data-admin-shift="Shift 1" onclick="pilihShiftAdmin('Shift 1')"
+                class="admin-shift-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all">
+                <p class="font-extrabold text-xs sm:text-sm text-slate-800"><i class="fa-solid fa-sun text-amber-500 mr-1.5"></i>Shift 1</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">06:00 - 14:00</p>
+              </button>
+              <button type="button" data-admin-shift="Shift 2" onclick="pilihShiftAdmin('Shift 2')"
+                class="admin-shift-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all">
+                <p class="font-extrabold text-xs sm:text-sm text-slate-800"><i class="fa-solid fa-cloud-sun text-sky-500 mr-1.5"></i>Shift 2</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">14:00 - 22:00</p>
+              </button>
+              <button type="button" data-admin-shift="Shift 3" onclick="pilihShiftAdmin('Shift 3')"
+                class="admin-shift-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all">
+                <p class="font-extrabold text-xs sm:text-sm text-slate-800"><i class="fa-solid fa-moon text-indigo-500 mr-1.5"></i>Shift 3</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">22:00 - 06:00</p>
+              </button>
+              <button type="button" data-admin-shift="Shift Off" onclick="pilihShiftAdmin('Shift Off')"
+                class="admin-shift-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-rose-400 transition-all">
+                <p class="font-extrabold text-xs sm:text-sm text-slate-800"><i class="fa-solid fa-mug-hot text-rose-500 mr-1.5"></i>Shift Off</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Libur / Off</p>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2.5 pt-1">
+            <button type="button" id="btnAdminSimpanAbsen" onclick="simpanAbsenOlehAdmin()"
+              class="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-blue-900 to-rose-700 hover:from-blue-950 hover:to-rose-800 text-white font-extrabold text-sm shadow-md flex items-center justify-center space-x-2 transition">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>Simpan Absen Karyawan</span>
+            </button>
+            <button type="button" onclick="switchAdminTab('rekap')"
+              class="py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+              <i class="fa-solid fa-table-list text-blue-700"></i>
+              <span>Lihat Total Rekap</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB ADMIN 1: REKAP BULANAN -->
+      <section id="adminSection-rekap" class="admin-section space-y-5 view-transition">
+        <!-- Filter & Ekspor CSV -->
+        <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200/80 flex flex-wrap items-end justify-between gap-4">
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Bulan Rekap</label>
+              <select id="filterBulanAdmin" onchange="renderAdminDashboard()"
+                class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Tahun</label>
+              <select id="filterTahunAdmin" onchange="renderAdminDashboard()"
+                class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              </select>
+            </div>
+          </div>
+
+          <button type="button" onclick="downloadRekapCSV()"
+            class="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-extrabold flex items-center space-x-2 shadow-xs transition">
+            <i class="fa-solid fa-file-csv text-sm"></i>
+            <span>Download Rekap CSV / Excel</span>
+          </button>
+        </div>
+
+        <!-- Ringkasan Statistik Shift -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="col-span-2 sm:col-span-1 bg-slate-900 text-white rounded-2xl p-4 shadow-xs">
+            <p class="text-[11px] text-slate-300 font-semibold">Total Log Absen</p>
+            <p id="statTotalCatatan" class="text-2xl font-extrabold mt-1">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-200/80">
+            <p class="text-[11px] text-amber-700 font-bold"><i class="fa-solid fa-sun mr-1"></i>Shift 1</p>
+            <p id="statShift1" class="text-2xl font-extrabold text-slate-800 mt-1">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-200/80">
+            <p class="text-[11px] text-sky-700 font-bold"><i class="fa-solid fa-cloud-sun mr-1"></i>Shift 2</p>
+            <p id="statShift2" class="text-2xl font-extrabold text-slate-800 mt-1">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-200/80">
+            <p class="text-[11px] text-indigo-700 font-bold"><i class="fa-solid fa-moon mr-1"></i>Shift 3</p>
+            <p id="statShift3" class="text-2xl font-extrabold text-slate-800 mt-1">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-200/80">
+            <p class="text-[11px] text-rose-600 font-bold"><i class="fa-solid fa-mug-hot mr-1"></i>Shift Off</p>
+            <p id="statShiftOff" class="text-2xl font-extrabold text-rose-600 mt-1">0</p>
+          </div>
+        </div>
+
+        <!-- Tabel Rekapitulasi Per Karyawan -->
+        <div class="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-800">Rekap Kehadiran Per Karyawan</h2>
+              <p id="labelPeriodeRekap" class="text-xs text-slate-500 mt-0.5">Periode Laporan</p>
+            </div>
+            <span id="badgeJumlahKaryawan" class="px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-extrabold">0 Karyawan</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[11px] font-extrabold">
+                  <th class="py-3 px-4 text-center w-12">No</th>
+                  <th class="py-3 px-4">Nama Karyawan</th>
+                  <th class="py-3 px-3 text-center">Shift 1</th>
+                  <th class="py-3 px-3 text-center">Shift 2</th>
+                  <th class="py-3 px-3 text-center">Shift 3</th>
+                  <th class="py-3 px-3 text-center">Shift Off</th>
+                  <th class="py-3 px-4 text-center bg-blue-50/70 text-blue-900">Total Kehadiran</th>
+                  <th class="py-3 px-3 text-center bg-slate-100/80 text-slate-700">Total Jadwal</th>
+                </tr>
+              </thead>
+              <tbody id="tabelRekapBody" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB ADMIN 2: LOG RIWAYAT -->
+      <section id="adminSection-riwayat" class="admin-section hidden space-y-4 view-transition">
+        <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-extrabold text-slate-800">Filter Log Kehadiran</h2>
+            <span id="badgeTotalLog" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">0 Catatan</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+            <input type="text" id="filterCariNama" oninput="renderRiwayat()" placeholder="Cari nama karyawan..."
+              class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <select id="filterShiftLog" onchange="renderRiwayat()"
+              class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="">Semua Shift</option>
+              <option value="Shift 1">Shift 1</option>
+              <option value="Shift 2">Shift 2</option>
+              <option value="Shift 3">Shift 3</option>
+              <option value="Shift Off">Shift Off</option>
+            </select>
+            <input type="date" id="filterTanggalLog" onchange="renderRiwayat()"
+              class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <button type="button" onclick="resetFilterRiwayat()"
+              class="px-3.5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition">
+              Reset Filter
+            </button>
+          </div>
+        </div>
+
+        <div id="riwayatListContainer" class="space-y-2.5"></div>
+      </section>
+
+      <!-- TAB ADMIN 3: DAFTAR NAMA CEPAT & PIN PRIBADI KARYAWAN -->
+      <section id="adminSection-karyawan" class="admin-section hidden space-y-4 view-transition">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-800">Tambah / Ubah PIN Pribadi Karyawan</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Kelola daftar nama cepat dan PIN verifikasi masing-masing karyawan.</p>
+            </div>
+            <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-2 rounded-xl cursor-pointer">
+              <input type="checkbox" id="toggleStrictEmployeePin" onchange="simpanPengaturanStrictPin()" checked class="rounded text-blue-600">
+              <span>Wajib Terdaftar (Kunci Ketat)</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <input type="text" id="inputAdminNewQuickName" placeholder="Nama lengkap karyawan..."
+              class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <input type="text" inputmode="numeric" id="inputAdminNewQuickPin" maxlength="8" placeholder="PIN Pribadi (4-8 angka)..."
+              class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <button type="button" onclick="tambahSatuNamaCepat()"
+              class="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-extrabold flex items-center justify-center space-x-1.5 transition">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Simpan Karyawan & PIN</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Daftar Karyawan Terdaftar</h3>
+            <span id="badgeAdminTotalQuickNames" class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-extrabold">0 Terdaftar</span>
+          </div>
+          <div id="adminQuickNamesList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
+        </div>
+      </section>
+
+      <!-- TAB ADMIN 4: SERVER GOOGLE SHEETS & UBAH PIN ADMIN -->
+      <section id="adminSection-pengaturan" class="admin-section hidden space-y-4 view-transition">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+          <div>
+            <h2 class="text-sm font-extrabold text-slate-800">Koneksi Google Apps Script (Rekap Terpusat)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">URL Web App (/exec) Google Sheets tempat seluruh data absensi karyawan terkumpul.</p>
+          </div>
+
+          <input type="url" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/.../exec"
+            class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="simpanScriptUrl()"
+              class="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-extrabold transition">
+              Simpan URL Endpoint
+            </button>
+            <button type="button" onclick="syncSemuaDataTertunda()"
+              class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center space-x-1.5 transition">
+              <i class="fa-solid fa-rotate"></i>
+              <span>Kirim Ulang Data Tertunda</span>
+            </button>
+            <button type="button" onclick="resetDefaultScriptUrl()"
+              class="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition">
+              Reset ke URL Bawaan
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-3">
+          <div>
+            <h2 class="text-sm font-extrabold text-slate-800">Ubah PIN Portal Admin</h2>
+            <p class="text-xs text-slate-500 mt-0.5">PIN bawaan adalah <code class="font-mono font-bold text-slate-700">7495710</code> atau <code class="font-mono font-bold text-slate-700">1234</code>.</p>
+          </div>
+          <div class="flex flex-wrap gap-2.5 max-w-md">
+            <input type="password" inputmode="numeric" id="inputNewAdminPin" maxlength="10" placeholder="PIN Admin baru (4-10 angka)..."
+              class="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <button type="button" onclick="simpanPinAdminBaru()"
+              class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold transition">
+              Simpan PIN Admin
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL LOGIN PORTAL ADMIN                                                -->
+  <!-- ======================================================================= -->
+  <div id="adminLoginModal" class="fixed inset-0 bg-slate-950/65 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <form onsubmit="prosesLoginAdmin(event)" class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 view-transition">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center">
+            <i class="fa-solid fa-shield-halved text-lg"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-800">Login Portal Admin</h3>
+            <p class="text-[11px] text-slate-500">SPBU 74.957.10 • Khusus Pengelola</p>
+          </div>
+        </div>
+        <button type="button" onclick="tutupModalLoginAdmin()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div>
+        <label for="inputAdminPin" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+          Masukkan PIN Admin
+        </label>
+        <input type="password" inputmode="numeric" id="inputAdminPin" maxlength="10" autocomplete="off"
+          placeholder="•••••••"
+          class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono font-extrabold text-center tracking-widest text-base focus:outline-none focus:ring-2 focus:ring-blue-600">
+        <p id="loginErrorMsg" class="hidden text-xs font-bold text-rose-600 mt-1.5 text-center">
+          PIN Admin salah! Coba lagi.
+        </p>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="tutupModalLoginAdmin()"
+          class="flex-1 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+          Batal
+        </button>
+        <button type="submit"
+          class="flex-1 py-3 rounded-2xl bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-xs shadow-md transition">
+          Masuk Admin
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL KONFIRMASI HAPUS LOG RIWAYAT                                      -->
+  <!-- ======================================================================= -->
+  <div id="deleteConfirmModal" class="fixed inset-0 bg-slate-950/65 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-center view-transition">
+      <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-xl mx-auto">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800">Konfirmasi Hapus</h3>
+        <p id="deleteModalDesc" class="text-xs text-slate-500 mt-1">Hapus data absensi ini?</p>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="tutupModalHapus()"
+          class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+          Batal
+        </button>
+        <button type="button" id="btnConfirmDelete"
+          class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs transition">
+          Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- JAVASCRIPT LOGIC                                                        -->
+  <!-- ======================================================================= -->
+  <script>
+    // =========================================================================
+    // KONFIGURASI PUSAT AKUN ADMIN (TERHUBUNG KE GOOGLE SHEETS SPBU 74.957.10)
+    // =========================================================================
+    const MASTER_ADMIN_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuIIsRe_29KNGyUzEVoR8PIzkzo_V_jhFVcg8fbUiyjKPoHjTvg6qSVnu_gLgLIyY/exec';
+
+    const STORAGE_KEY_DATA = 'absenklik_spbu_7495710_logs_v2';
+    const STORAGE_KEY_QUICK_EMP = 'absenklik_spbu_7495710_quick_emp_v4';
+    const STORAGE_KEY_STRICT_PIN = 'absenklik_spbu_7495710_strict_pin_v1';
+    const STORAGE_KEY_URL = 'absenklik_spbu_7495710_script_url_v2';
+    const STORAGE_KEY_PIN = 'absenklik_spbu_7495710_admin_pin_v1';
+
+    const DEFAULT_PINS = ['7495710', '1234'];
+
+    const INITIAL_EMPLOYEES = [
+      { nama: 'Zulkifli Dama', pin: '1111' },
+      { nama: 'Iwan Rahman', pin: '2222' },
+      { nama: 'Ishak', pin: '3333' },
+      { nama: 'Husni Mubarak', pin: '4444' },
+      { nama: 'Noval Alamri', pin: '5555' },
+      { nama: 'Fikri Alamri', pin: '6666' },
+      { nama: 'Hardi Sulembeng', pin: '7777' },
+      { nama: 'Rivai Mokodompis', pin: '8888' },
+      { nama: 'Steven Tooy', pin: '9999' },
+      { nama: 'Andrian Gobel', pin: '1010' },
+      { nama: 'Asur Anuz', pin: '1112' },
+      { nama: 'Ifdawan Mokoginta', pin: '1212' }
+    ];
+
+    let selectedShift = '';
+    let selectedAdminShift = '';
+    let verifiedEmployeeName = '';
+    let lastSubmittedEmployee = { nama: '', pin: '' };
+
+    // =========================================================================
+    // INISIALISASI PWA & IKON APLIKASI ANDROID (LATAR BELAKANG)
+    // =========================================================================
+    function initAndroidPWA() {
+      const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#172554"/>
+            <stop offset="100%" stop-color="#be123c"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="112" fill="url(#g)"/>
+        <rect x="148" y="128" width="164" height="256" rx="24" fill="#ffffff"/>
+        <rect x="172" y="156" width="116" height="84" rx="12" fill="#1e3a8a"/>
+        <path d="M312 184h28a24 24 0 0 1 24 24v124a20 20 0 0 0 40 0V196l-28-28" fill="none" stroke="#fda4af" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="230" y="336" font-family="sans-serif" font-weight="bold" font-size="38" fill="#be123c" text-anchor="middle">SPBU</text>
+      </svg>`;
+      const iconDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgIcon);
+
+      const iconLink = document.getElementById('pwaAppIconLink');
+      const appleLink = document.getElementById('pwaAppleIconLink');
+      if (iconLink) iconLink.href = iconDataUrl;
+      if (appleLink) appleLink.href = iconDataUrl;
+
+      const manifestObj = {
+        name: 'Absenku - SPBU 74.957.10',
+        short_name: 'Absenku',
+        description: 'Aplikasi Absensi Shift Karyawan SPBU 74.957.10',
+        start_url: window.location.href.split('#')[0],
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#f1f5f9',
+        theme_color: '#1e3a8a',
+        icons: [
+          { src: iconDataUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: iconDataUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+      const manifestLink = document.getElementById('pwaManifestLink');
+      if (manifestLink) manifestLink.href = URL.createObjectURL(manifestBlob);
+    }
+
+    // =========================================================================
+    // HELPER PENYIMPANAN LOG LOKAL & TANGGAL DEFAULT
+    // =========================================================================
+    function getLogs() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_DATA)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLogs(logs) {
+      localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(logs));
+      updatePendingSyncBadge();
+    }
+
+    function getTodayISO() {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Makassar',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      return formatter.format(now);
+    }
+
+    function getCurrentTimeWITA() {
+      return new Date().toLocaleTimeString('id-ID', {
+        timeZone: 'Asia/Makassar',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).replace(/\./g, ':');
+    }
+
+    function initDefaultDate() {
+      const todayISO = getTodayISO();
+      const inputTgl = document.getElementById('inputTanggal');
+      if (inputTgl && !inputTgl.value) {
+        inputTgl.value = todayISO;
+      }
+      const adminInputTgl = document.getElementById('adminInputTanggal');
+      if (adminInputTgl && !adminInputTgl.value) {
+        adminInputTgl.value = todayISO;
+      }
+
+      const [yearStr, monthStr] = todayISO.split('-');
+      ['filterBulanAdmin', 'filterBulanPribadi'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = monthStr;
+      });
+
+      const currentYear = parseInt(yearStr, 10);
+      ['filterTahunAdmin', 'filterTahunPribadi'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = '';
+        for (let y = currentYear - 1; y <= currentYear + 1; y++) {
+          const opt = document.createElement('option');
+          opt.value = String(y);
+          opt.textContent = String(y);
+          if (y === currentYear) opt.selected = true;
+          el.appendChild(opt);
+        }
+      });
+    }
+
+    function startLiveClocks() {
+      const updateClock = () => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('id-ID', {
+          timeZone: 'Asia/Makassar',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(/\./g, ':');
+
+        const dateStr = now.toLocaleDateString('id-ID', {
+          timeZone: 'Asia/Makassar',
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+
+        const empClock = document.getElementById('empLiveClock');
+        const empDate = document.getElementById('empLiveDate');
+        const admClock = document.getElementById('adminLiveClock');
+        if (empClock) empClock.textContent = timeStr;
+        if (empDate) empDate.textContent = dateStr;
+        if (admClock) admClock.textContent = `${timeStr} WITA`;
+      };
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
+
+    // =========================================================================
+    // MANAJEMEN DAFTAR NAMA CEPAT & PIN PRIBADI KARYAWAN
+    // =========================================================================
+    function initQuickNamesIfNeeded() {
+      if (localStorage.getItem(STORAGE_KEY_QUICK_EMP) === null) {
+        localStorage.setItem(STORAGE_KEY_QUICK_EMP, JSON.stringify(INITIAL_EMPLOYEES));
+      }
+      if (localStorage.getItem(STORAGE_KEY_STRICT_PIN) === null) {
+        localStorage.setItem(STORAGE_KEY_STRICT_PIN, 'true');
+      }
+      const toggleEl = document.getElementById('toggleStrictEmployeePin');
+      if (toggleEl) toggleEl.checked = isStrictEmployeePinEnabled();
+    }
+
+    function getQuickEmployees() {
+      try {
+        const list = JSON.parse(localStorage.getItem(STORAGE_KEY_QUICK_EMP)) || [];
+        return list.sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveQuickEmployees(list) {
+      localStorage.setItem(STORAGE_KEY_QUICK_EMP, JSON.stringify(list));
+      renderQuickChipsKaryawan();
+      renderAdminQuickNames();
+    }
+
+    function isStrictEmployeePinEnabled() {
+      return localStorage.getItem(STORAGE_KEY_STRICT_PIN) !== 'false';
+    }
+
+    function simpanPengaturanStrictPin() {
+      const checked = document.getElementById('toggleStrictEmployeePin').checked;
+      localStorage.setItem(STORAGE_KEY_STRICT_PIN, checked ? 'true' : 'false');
+      showToast('info', 'Pengaturan Disimpan', checked ? 'Mode kunci ketat diaktifkan.' : 'Mode kunci ketat dinonaktifkan.');
+    }
+
+    function getDisplayChipsList() {
+      const registered = getQuickEmployees();
+      if (registered.length > 0) {
+        return { employees: registered, fromHistory: false };
+      }
+      const uniqueNames = [...new Set(getLogs().map(l => formatTitleCase(l.nama)))].sort((a, b) => a.localeCompare(b, 'id'));
+      return { employees: uniqueNames.map(n => ({ nama: n, pin: '' })), fromHistory: true };
+    }
+
+    function renderQuickChipsKaryawan() {
+      const container = document.getElementById('employeeQuickChipsContainer');
+      const badge = document.getElementById('badgeJumlahChipKaryawan');
+      if (!container) return;
+
+      const { employees } = getDisplayChipsList();
+      if (badge) badge.textContent = `${employees.length} nama`;
+
+      if (employees.length === 0) {
+        container.innerHTML = `<span class="text-[11px] text-slate-400 italic">Belum ada daftar nama cepat. Silakan ketik nama di atas.</span>`;
+        return;
+      }
+
+      const currentVal = (document.getElementById('inputNama')?.value || '').trim().toLowerCase();
+      container.innerHTML = employees.map(emp => {
+        const isActive = currentVal && emp.nama.toLowerCase() === currentVal;
+        const activeClass = isActive
+          ? 'bg-blue-800 text-white border-blue-800 shadow-xs'
+          : 'bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-900 border-slate-200';
+        return `
+          <button type="button" onclick="pilihNamaCepat('${escapeHTML(emp.nama).replace(/'/g, "\\'")}')"
+            class="chip-nama-btn px-3 py-1.5 rounded-full border text-xs font-bold transition ${activeClass}">
+            ${escapeHTML(emp.nama)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function pilihNamaCepat(nama) {
+      const inputEl = document.getElementById('inputNama');
+      inputEl.value = nama;
+      sinkronHighlightChipNama();
+      const pinInput = document.getElementById('inputEmployeePin');
+      if (pinInput) {
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+
+    function bersihkanInputNama() {
+      document.getElementById('inputNama').value = '';
+      document.getElementById('inputEmployeePin').value = '';
+      sinkronHighlightChipNama();
+      document.getElementById('inputNama').focus();
+    }
+
+    function sinkronHighlightChipNama() {
+      renderQuickChipsKaryawan();
+      const typedName = (document.getElementById('inputNama')?.value || '').trim().toLowerCase();
+      const matched = getQuickEmployees().find(e => e.nama.toLowerCase() === typedName);
+      const badge = document.getElementById('employeePinStatusBadge');
+      const hint = document.getElementById('employeePinHint');
+
+      if (!badge || !hint) return;
+      if (matched) {
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+        badge.textContent = 'Akun Terdaftar';
+        hint.textContent = `Masukkan PIN pribadi milik ${matched.nama} untuk melanjutkan.`;
+      } else if (typedName.length > 0) {
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        badge.textContent = isStrictEmployeePinEnabled() ? 'Belum Terdaftar' : 'Karyawan Baru';
+        hint.textContent = isStrictEmployeePinEnabled()
+          ? 'Nama belum terdaftar di sistem. Hubungi Admin untuk membuat PIN pribadi.'
+          : 'Nama baru diizinkan karena mode kunci ketat tidak aktif.';
+      } else {
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800';
+        badge.textContent = 'Wajib Verifikasi';
+        hint.textContent = 'Mencegah rekan kerja lain mengisi absen atas nama Anda.';
+      }
+    }
+
+    function tambahSatuNamaCepat() {
+      const namaRaw = document.getElementById('inputAdminNewQuickName').value;
+      const pinRaw = (document.getElementById('inputAdminNewQuickPin').value || '').trim();
+      const nama = formatTitleCase(namaRaw);
+
+      if (!nama || nama.length < 2) {
+        showToast('error', 'Nama Tidak Valid', 'Masukkan nama lengkap karyawan minimal 2 huruf.');
+        return;
+      }
+      if (!/^\d{4,8}$/.test(pinRaw)) {
+        showToast('error', 'PIN Tidak Valid', 'PIN pribadi harus terdiri dari 4 hingga 8 digit angka.');
+        return;
+      }
+
+      const list = getQuickEmployees();
+      const existingIdx = list.findIndex(e => e.nama.toLowerCase() === nama.toLowerCase());
+      if (existingIdx >= 0) {
+        list[existingIdx].pin = pinRaw;
+        showToast('success', 'PIN Diperbarui', `PIN pribadi untuk ${nama} berhasil diperbarui.`);
+      } else {
+        list.push({ nama, pin: pinRaw });
+        showToast('success', 'Karyawan Ditambahkan', `${nama} berhasil ditambahkan ke daftar cepat.`);
+      }
+
+      saveQuickEmployees(list);
+      document.getElementById('inputAdminNewQuickName').value = '';
+      document.getElementById('inputAdminNewQuickPin').value = '';
+    }
+
+    function hapusSatuNamaCepat(nama) {
+      const list = getQuickEmployees().filter(e => e.nama.toLowerCase() !== nama.toLowerCase());
+      saveQuickEmployees(list);
+      showToast('info', 'Dihapus', `${nama} dihapus dari daftar nama cepat.`);
+    }
+
+    function renderAdminQuickNames() {
+      const container = document.getElementById('adminQuickNamesList');
+      const badge = document.getElementById('badgeAdminTotalQuickNames');
+      if (!container) return;
+
+      const list = getQuickEmployees();
+      if (badge) badge.textContent = `${list.length} Terdaftar`;
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-6 text-xs text-slate-400">Belum ada karyawan terdaftar.</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(emp => `
+        <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <div>
+            <p class="text-xs font-extrabold text-slate-800">${escapeHTML(emp.nama)}</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">PIN Pribadi: <span class="font-mono font-bold text-blue-800">${escapeHTML(emp.pin)}</span></p>
+          </div>
+          <button type="button" onclick="hapusSatuNamaCepat('${escapeHTML(emp.nama).replace(/'/g, "\\'")}')"
+            title="Hapus dari daftar"
+            class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // PILIH SHIFT & SIMPAN ABSEN KARYAWAN (LANGSUNG KE AKUN ADMIN)
+    // =========================================================================
+    function pilihShift(shiftName) {
+      selectedShift = shiftName;
+      document.querySelectorAll('.shift-card').forEach(card => {
+        const cardShift = card.getAttribute('data-shift');
+        const checkIcon = card.querySelector('.shift-check');
+        if (cardShift === shiftName) {
+          if (shiftName === 'Shift Off') {
+            card.className = 'shift-card text-left p-3.5 rounded-2xl border-2 border-rose-500 bg-rose-50/70 shadow-xs transition-all';
+          } else {
+            card.className = 'shift-card text-left p-3.5 rounded-2xl border-2 border-blue-600 bg-blue-50/70 shadow-xs transition-all';
+          }
+          if (checkIcon) checkIcon.classList.remove('opacity-0');
+        } else {
+          card.className = 'shift-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all';
+          if (checkIcon) checkIcon.classList.add('opacity-0');
+        }
+      });
+    }
+
+    async function simpanAbsen() {
+      const tanggal = document.getElementById('inputTanggal').value;
+      const nama = formatTitleCase(document.getElementById('inputNama').value);
+      const enteredPin = (document.getElementById('inputEmployeePin').value || '').trim();
+
+      if (!tanggal) {
+        showToast('error', 'Tanggal Kosong', 'Harap pilih tanggal bertugas terlebih dahulu.');
+        return;
+      }
+      if (!nama || nama.length < 2) {
+        showToast('error', 'Nama Kosong', 'Ketik atau klik nama karyawan terlebih dahulu.');
+        document.getElementById('inputNama').focus();
+        return;
+      }
+
+      const registeredEmployees = getQuickEmployees();
+      const matchedEmployee = registeredEmployees.find(e => e.nama.toLowerCase() === nama.toLowerCase());
+      const strictMode = isStrictEmployeePinEnabled();
+
+      if (matchedEmployee) {
+        if (!enteredPin) {
+          showToast('error', 'PIN Wajib Diisi', `Masukkan PIN pribadi milik ${matchedEmployee.nama}.`);
+          document.getElementById('inputEmployeePin').focus();
+          return;
+        }
+        if (enteredPin !== matchedEmployee.pin) {
+          showToast('error', 'PIN Pribadi Salah', `PIN tidak cocok untuk ${matchedEmployee.nama}.`);
+          document.getElementById('inputEmployeePin').value = '';
+          document.getElementById('inputEmployeePin').focus();
+          return;
+        }
+      } else if (strictMode) {
+        showToast('error', 'Nama Belum Terdaftar', 'Nama Anda belum terdaftar di daftar PIN SPBU. Hubungi Admin.');
+        return;
+      }
+
+      if (!selectedShift) {
+        showToast('error', 'Pilih Shift', 'Silakan pilih salah satu kartu Shift 1, Shift 2, Shift 3, atau Shift Off.');
+        return;
+      }
+
+      const btn = document.getElementById('btnSimpanAbsen');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Mengirim ke Akun Admin...</span>`;
+
+      const jamInput = getCurrentTimeWITA();
+      const finalName = matchedEmployee ? matchedEmployee.nama : nama;
+      const newEntry = {
+        id: 'abs-' + Date.now(),
+        tanggal: tanggal,
+        jamInput: jamInput,
+        nama: finalName,
+        shift: selectedShift,
+        synced: false
+      };
+
+      const syncedOk = await kirimKeGoogleSheets(newEntry);
+      newEntry.synced = syncedOk;
+
+      const logs = getLogs();
+      logs.unshift(newEntry);
+      saveLogs(logs);
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i><span>Simpan Absen</span>`;
+      lastSubmittedEmployee = { nama: finalName, pin: enteredPin };
+      renderQuickChipsKaryawan();
+
+      const syncNote = syncedOk
+        ? 'Terkirim langsung ke Google Sheets & Akun Pusat Admin SPBU 74.957.10'
+        : 'Tersimpan di perangkat (menunggu URL Web App Admin / koneksi internet)';
+
+      document.getElementById('receiptNama').textContent = finalName;
+      document.getElementById('receiptTanggal').textContent = formatTanggalIndo(tanggal);
+      document.getElementById('receiptShift').textContent = selectedShift;
+      document.getElementById('receiptJam').textContent = `${jamInput} WITA`;
+      document.getElementById('successSyncNote').textContent = syncNote;
+
+      document.getElementById('employeeFormCard').classList.add('hidden');
+      document.getElementById('employeeSuccessCard').classList.remove('hidden');
+      showToast('success', 'Absen Tercatat', `${finalName} • ${selectedShift}`);
+    }
+
+    function isiAbsenLagi(keepName) {
+      document.getElementById('employeeSuccessCard').classList.add('hidden');
+      document.getElementById('employeeFormCard').classList.remove('hidden');
+      selectedShift = '';
+      pilihShift('');
+      if (!keepName) {
+        document.getElementById('inputNama').value = '';
+        document.getElementById('inputEmployeePin').value = '';
+      }
+      sinkronHighlightChipNama();
+    }
+
+    // =========================================================================
+    // SUB-TAB REKAP KEHADIRAN PRIBADI KARYAWAN
+    // =========================================================================
+    function switchEmployeeSubTab(tab) {
+      const absenView = document.getElementById('empSubView-absen');
+      const rekapView = document.getElementById('empSubView-rekap');
+      const btnAbsen = document.getElementById('empNavBtn-absen');
+      const btnRekap = document.getElementById('empNavBtn-rekap');
+
+      if (tab === 'rekap') {
+        absenView.classList.add('hidden');
+        rekapView.classList.remove('hidden');
+        btnRekap.className = 'py-2 px-3 rounded-xl bg-white text-blue-950 font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition';
+        btnAbsen.className = 'py-2 px-3 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition';
+        renderRekapEmpChips();
+      } else {
+        rekapView.classList.add('hidden');
+        absenView.classList.remove('hidden');
+        btnAbsen.className = 'py-2 px-3 rounded-xl bg-white text-blue-950 font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition';
+        btnRekap.className = 'py-2 px-3 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition';
+      }
+    }
+
+    function renderRekapEmpChips() {
+      const container = document.getElementById('rekapEmpChipsContainer');
+      if (!container) return;
+      const { employees } = getDisplayChipsList();
+      if (employees.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = employees.map(emp => `
+        <button type="button" onclick="pilihNamaRekapPribadi('${escapeHTML(emp.nama).replace(/'/g, "\\'")}')"
+          class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 border border-slate-200 text-[11px] font-semibold transition">
+          ${escapeHTML(emp.nama)}
+        </button>
+      `).join('');
+    }
+
+    function pilihNamaRekapPribadi(nama) {
+      document.getElementById('rekapEmpNama').value = nama;
+      const pinEl = document.getElementById('rekapEmpPin');
+      pinEl.value = '';
+      pinEl.focus();
+    }
+
+    function bukaRekapDariKonfirmasi() {
+      switchEmployeeSubTab('rekap');
+      if (lastSubmittedEmployee.nama) {
+        document.getElementById('rekapEmpNama').value = lastSubmittedEmployee.nama;
+        document.getElementById('rekapEmpPin').value = lastSubmittedEmployee.pin || '';
+        if (lastSubmittedEmployee.pin || !isStrictEmployeePinEnabled()) {
+          verifikasiLihatRekapPribadi();
+        }
+      }
+    }
+
+    function verifikasiLihatRekapPribadi() {
+      const nama = formatTitleCase(document.getElementById('rekapEmpNama').value);
+      const enteredPin = (document.getElementById('rekapEmpPin').value || '').trim();
+
+      if (!nama || nama.length < 2) {
+        showToast('error', 'Nama Kosong', 'Ketik atau pilih nama Anda terlebih dahulu.');
+        document.getElementById('rekapEmpNama').focus();
+        return;
+      }
+
+      const registeredEmployees = getQuickEmployees();
+      const matchedEmployee = registeredEmployees.find(e => e.nama.toLowerCase() === nama.toLowerCase());
+      const strictMode = isStrictEmployeePinEnabled();
+
+      if (matchedEmployee) {
+        if (!enteredPin) {
+          showToast('error', 'PIN Wajib Diisi', `Masukkan PIN pribadi milik ${matchedEmployee.nama} untuk membuka rekap.`);
+          document.getElementById('rekapEmpPin').focus();
+          return;
+        }
+        if (enteredPin !== matchedEmployee.pin) {
+          showToast('error', 'PIN Pribadi Salah', `PIN tidak cocok untuk ${matchedEmployee.nama}. Rekap pribadi dikunci.`);
+          document.getElementById('rekapEmpPin').value = '';
+          document.getElementById('rekapEmpPin').focus();
+          return;
+        }
+        verifiedEmployeeName = matchedEmployee.nama;
+      } else if (strictMode) {
+        showToast('error', 'Nama Tidak Terdaftar', 'Nama tidak ditemukan pada daftar PIN karyawan SPBU.');
+        return;
+      } else {
+        verifiedEmployeeName = nama;
+      }
+
+      document.getElementById('personalRekapNamaTitle').textContent = verifiedEmployeeName;
+      document.getElementById('empPersonalAuthCard').classList.add('hidden');
+      document.getElementById('empPersonalResultBox').classList.remove('hidden');
+      renderRekapPribadiKaryawan();
+      tarikDataDariCloudAdmin(false).then(() => renderRekapPribadiKaryawan());
+    }
+
+    function kunciKembaliRekapPribadi() {
+      verifiedEmployeeName = '';
+      document.getElementById('rekapEmpPin').value = '';
+      document.getElementById('personalChangePinBox').classList.add('hidden');
+      document.getElementById('empPersonalResultBox').classList.add('hidden');
+      document.getElementById('empPersonalAuthCard').classList.remove('hidden');
+    }
+
+    function toggleFormGantiPinPribadi() {
+      const box = document.getElementById('personalChangePinBox');
+      if (!box) return;
+      box.classList.toggle('hidden');
+      if (!box.classList.contains('hidden')) {
+        document.getElementById('inputPersonalNewPin').value = '';
+        document.getElementById('inputPersonalConfirmPin').value = '';
+        document.getElementById('inputPersonalNewPin').focus();
+      }
+    }
+
+    function simpanPinPribadiMandiri() {
+      if (!verifiedEmployeeName) return;
+      const newPin = (document.getElementById('inputPersonalNewPin').value || '').trim();
+      const confirmPin = (document.getElementById('inputPersonalConfirmPin').value || '').trim();
+
+      if (!/^\d{4,8}$/.test(newPin)) {
+        showToast('error', 'Format PIN Salah', 'PIN baru harus terdiri dari 4 hingga 8 digit angka.');
+        return;
+      }
+      if (newPin !== confirmPin) {
+        showToast('error', 'PIN Tidak Cocok', 'Konfirmasi PIN baru harus sama persis.');
+        return;
+      }
+
+      const list = getQuickEmployees();
+      const idx = list.findIndex(e => e.nama.toLowerCase() === verifiedEmployeeName.toLowerCase());
+      if (idx >= 0) {
+        list[idx].pin = newPin;
+      } else {
+        list.push({ nama: verifiedEmployeeName, pin: newPin });
+      }
+      saveQuickEmployees(list);
+
+      if (lastSubmittedEmployee.nama.toLowerCase() === verifiedEmployeeName.toLowerCase()) {
+        lastSubmittedEmployee.pin = newPin;
+      }
+
+      document.getElementById('inputPersonalNewPin').value = '';
+      document.getElementById('inputPersonalConfirmPin').value = '';
+      document.getElementById('personalChangePinBox').classList.add('hidden');
+      showToast('success', 'PIN Berhasil Diubah', `PIN pribadi untuk ${verifiedEmployeeName} telah diperbarui.`);
+    }
+
+    function renderRekapPribadiKaryawan() {
+      if (!verifiedEmployeeName) return;
+      const bulan = document.getElementById('filterBulanPribadi').value;
+      const tahun = document.getElementById('filterTahunPribadi').value;
+      const prefix = `${tahun}-${bulan}`;
+
+      const personalLogs = getLogs().filter(item =>
+        item.nama.toLowerCase() === verifiedEmployeeName.toLowerCase() &&
+        item.tanggal.startsWith(prefix)
+      ).sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+
+      let s1 = 0, s2 = 0, s3 = 0, sOff = 0;
+      personalLogs.forEach(item => {
+        if (item.shift === 'Shift 1') s1++;
+        else if (item.shift === 'Shift 2') s2++;
+        else if (item.shift === 'Shift 3') s3++;
+        else if (item.shift === 'Shift Off') sOff++;
+      });
+
+      document.getElementById('personalTotalMasuk').textContent = s1 + s2 + s3;
+      const totalSemuaEl = document.getElementById('personalTotalSemuaCatatan');
+      if (totalSemuaEl) {
+        totalSemuaEl.textContent = `Total keseluruhan jadwal (termasuk Off): ${s1 + s2 + s3 + sOff} jadwal`;
+      }
+      document.getElementById('personalShift1').textContent = s1;
+      document.getElementById('personalShift2').textContent = s2;
+      document.getElementById('personalShift3').textContent = s3;
+      document.getElementById('personalShiftOff').textContent = sOff;
+      document.getElementById('personalJumlahCatatan').textContent = `${personalLogs.length} catatan`;
+
+      const listEl = document.getElementById('personalHistoryList');
+      if (personalLogs.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-8 px-4 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200">
+            <i class="fa-regular fa-calendar-xmark text-2xl text-slate-300 mb-1.5"></i>
+            <p class="text-xs font-bold text-slate-600">Belum Ada Catatan Shift</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Tidak ditemukan absensi atas nama ${escapeHTML(verifiedEmployeeName)} pada bulan ini.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = personalLogs.map(item => `
+        <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <div>
+            <p class="text-xs font-extrabold text-slate-800">${formatTanggalIndo(item.tanggal)}</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">
+              Input pukul <span class="font-mono font-bold text-slate-700">${escapeHTML(item.jamInput || '-')} WITA</span>
+            </p>
+          </div>
+          <div class="flex items-center space-x-2">
+            ${getShiftBadgeHTML(item.shift)}
+            <span title="${item.synced ? 'Terkirim ke Admin' : 'Menunggu Sync'}"
+              class="w-2 h-2 rounded-full ${item.synced ? 'bg-emerald-500' : 'bg-amber-400'}"></span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // KONEKSI PUSAT GOOGLE APPS SCRIPT & TARIK DATA CLOUD KE PORTAL ADMIN
+    // =========================================================================
+    function getScriptUrl() {
+      const saved = localStorage.getItem(STORAGE_KEY_URL);
+      if (saved && saved.startsWith('https://') && !saved.includes('TEMPEL_URL')) {
+        return saved;
+      }
+      return MASTER_ADMIN_SCRIPT_URL;
+    }
+
+    function initScriptUrl() {
+      const inputEl = document.getElementById('inputScriptUrl');
+      if (inputEl) inputEl.value = getScriptUrl();
+    }
+
+    function simpanScriptUrl() {
+      const val = (document.getElementById('inputScriptUrl').value || '').trim();
+      if (!val.startsWith('https://')) {
+        showToast('error', 'URL Tidak Valid', 'Masukkan URL Google Apps Script yang diawali https://');
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY_URL, val);
+      showToast('success', 'URL Disimpan', 'Endpoint Google Apps Script berhasil diperbarui.');
+    }
+
+    function resetDefaultScriptUrl() {
+      localStorage.removeItem(STORAGE_KEY_URL);
+      initScriptUrl();
+      showToast('info', 'Reset Berhasil', 'URL dikembalikan ke endpoint master di dalam kode.');
+    }
+
+    async function kirimKeGoogleSheets(entry) {
+      const url = getScriptUrl();
+      if (!url || url.includes('TEMPEL_URL') || url.includes('placeholder')) return false;
+      try {
+        await fetch(url, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: entry.id,
+            tanggal: entry.tanggal,
+            nama: entry.nama,
+            shift: entry.shift,
+            jamInput: entry.jamInput
+          })
+        });
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function normalisasiTanggalSheet(rawTgl) {
+      if (!rawTgl) return '';
+      const str = String(rawTgl).trim();
+      // Format YYYY-MM-DD atau ISO string
+      const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (isoMatch) {
+        return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`;
+      }
+      // Format DD/MM/YYYY atau DD-MM-YYYY
+      const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      if (dmyMatch) {
+        return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+      }
+      const parsed = new Date(str);
+      if (!isNaN(parsed.getTime())) {
+        return new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Makassar',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(parsed);
+      }
+      return str.slice(0, 10);
+    }
+
+    async function tarikDataDariCloudAdmin(showFeedback = false) {
+      const url = getScriptUrl();
+      if (!url || url.includes('TEMPEL_URL') || url.includes('placeholder')) {
+        if (showFeedback) {
+          showToast('error', 'URL Belum Diatur', 'Tempel URL Google Apps Script (/exec) terlebih dahulu di tab Server & PIN Admin.');
+        }
+        return;
+      }
+
+      const btn = document.getElementById('btnRefreshCloudAdmin');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Menarik...</span>`;
+      }
+
+      try {
+        const separator = url.includes('?') ? '&' : '?';
+        const requestUrl = `${url}${separator}action=getLogs&t=${Date.now()}`;
+        const res = await fetch(requestUrl, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const rawText = await res.text();
+        let json;
+        try {
+          json = JSON.parse(rawText);
+        } catch (parseErr) {
+          throw new Error('NOT_JSON');
+        }
+
+        const rawRows = Array.isArray(json)
+          ? json
+          : (Array.isArray(json.logs) ? json.logs : (Array.isArray(json.data) ? json.data : null));
+
+        if (!rawRows) {
+          throw new Error('NO_LOGS_ARRAY');
+        }
+
+        const cloudLogs = rawRows.map((row, i) => {
+          const tglVal = row.tanggal || row.Tanggal || row.date || '';
+          const jamVal = row.jamInput || row['Jam Input (WITA)'] || row.jam || '';
+          const namaVal = row.nama || row['Nama Karyawan'] || row.name || '';
+          const shiftVal = row.shift || row.Shift || '';
+          const normTgl = normalisasiTanggalSheet(tglVal);
+          const normNama = formatTitleCase(namaVal);
+          const normShift = String(shiftVal || '').trim();
+          return {
+            id: row.id || `cloud-${normTgl}-${normNama}-${normShift}-${i}`,
+            tanggal: normTgl,
+            jamInput: String(jamVal || ''),
+            nama: normNama,
+            shift: normShift,
+            synced: true
+          };
+        }).filter(r => r.tanggal && r.nama && r.shift);
+
+        // Gabungkan data cloud dengan data lokal yang belum terkirim
+        const unsyncedLocal = getLogs().filter(l => !l.synced);
+        const merged = [...unsyncedLocal, ...cloudLogs];
+        saveLogs(merged);
+
+        renderAdminDashboard();
+        renderRiwayat();
+        if (showFeedback) {
+          showToast('success', 'Data Sheet Berhasil Ditarik', `Berhasil memuat ${cloudLogs.length} catatan dari Google Sheets.`);
+        }
+      } catch (err) {
+        if (showFeedback) {
+          if (err.message === 'NOT_JSON') {
+            showToast('error', 'Akses Google Script Ditolak', 'Atur "Yang memiliki akses" pada Deploy Web App menjadi "Siapa saja" (Anyone).');
+          } else if (err.message === 'NO_LOGS_ARRAY') {
+            showToast('error', 'Fungsi doGet Belum Dipasang', 'Perbarui fungsi doGet(e) di Google Apps Script lalu Deploy versi baru.');
+          } else {
+            showToast('error', 'Gagal Menarik Data Sheet', 'Pastikan URL /exec benar, skrip doGet sudah dideploy versi baru, dan koneksi internet aktif.');
+          }
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i><span>Tarik Data Sheet</span>`;
+        }
+      }
+    }
+
+    function updatePendingSyncBadge() {
+      const pendingCount = getLogs().filter(l => !l.synced).length;
+      const badge = document.getElementById('badgePendingSync');
+      if (!badge) return;
+      if (pendingCount > 0) {
+        badge.textContent = pendingCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    async function syncSemuaDataTertunda() {
+      const logs = getLogs();
+      const pending = logs.filter(l => !l.synced);
+      if (pending.length === 0) {
+        showToast('info', 'Semua Tersinkron', 'Tidak ada data tertunda yang perlu dikirim.');
+        return;
+      }
+      let successCount = 0;
+      for (const item of pending) {
+        const ok = await kirimKeGoogleSheets(item);
+        if (ok) {
+          item.synced = true;
+          successCount++;
+        }
+      }
+      saveLogs(logs);
+      renderRiwayat();
+      if (successCount > 0) {
+        showToast('success', 'Sync Berhasil', `${successCount} catatan berhasil dikirim ke Google Sheets.`);
+      } else {
+        showToast('error', 'Sync Gagal', 'Periksa koneksi internet atau URL Web App Google Sheets.');
+      }
+    }
+
+    // =========================================================================
+    // FORMATTER & UI HELPER
+    // =========================================================================
+    function formatTitleCase(str) {
+      return String(str || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    }
+
+    function formatTanggalIndo(isoStr) {
+      if (!isoStr) return '-';
+      const parts = isoStr.split('-');
+      if (parts.length !== 3) return isoStr;
+      const bulanIndo = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const bIdx = parseInt(parts[1], 10) - 1;
+      return `${parts[2]} ${bulanIndo[bIdx] || parts[1]} ${parts[0]}`;
+    }
+
+    function getShiftBadgeHTML(shift) {
+      if (shift === 'Shift 1') {
+        return `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-extrabold">Shift 1</span>`;
+      }
+      if (shift === 'Shift 2') {
+        return `<span class="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[11px] font-extrabold">Shift 2</span>`;
+      }
+      if (shift === 'Shift 3') {
+        return `<span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[11px] font-extrabold">Shift 3</span>`;
+      }
+      return `<span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-extrabold">Shift Off</span>`;
+    }
+
+    function showToast(type, title, message) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const styles = {
+        success: { bg: 'bg-emerald-900 border-emerald-700', icon: 'fa-circle-check text-emerald-300' },
+        error: { bg: 'bg-rose-900 border-rose-700', icon: 'fa-circle-exclamation text-rose-300' },
+        info: { bg: 'bg-slate-900 border-slate-700', icon: 'fa-circle-info text-blue-300' }
+      };
+      const st = styles[type] || styles.info;
+
+      const toast = document.createElement('div');
+      toast.className = `${st.bg} text-white px-4 py-3 rounded-2xl shadow-xl border flex items-start space-x-3 pointer-events-auto view-transition`;
+      toast.innerHTML = `
+        <i class="fa-solid ${st.icon} mt-0.5 text-sm"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-extrabold">${escapeHTML(title)}</p>
+          <p class="text-[11px] text-slate-200 mt-0.5 leading-snug">${escapeHTML(message)}</p>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 3800);
+    }
+
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // =========================================================================
+    // PORTAL ADMIN: LOGIN, NAVIGASI TAB, REKAP BULANAN, RIWAYAT & EXPORT CSV
+    // =========================================================================
+    function bukaModalLoginAdmin() {
+      const modal = document.getElementById('adminLoginModal');
+      const inputPin = document.getElementById('inputAdminPin');
+      const errMsg = document.getElementById('loginErrorMsg');
+      errMsg.classList.add('hidden');
+      inputPin.value = '';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => inputPin.focus(), 100);
+    }
+
+    function tutupModalLoginAdmin() {
+      const modal = document.getElementById('adminLoginModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function prosesLoginAdmin(e) {
+      if (e) e.preventDefault();
+      const enteredPin = document.getElementById('inputAdminPin').value.trim();
+      const customPin = localStorage.getItem(STORAGE_KEY_PIN);
+      const validPins = customPin ? [customPin] : DEFAULT_PINS;
+
+      if (validPins.includes(enteredPin)) {
+        tutupModalLoginAdmin();
+        masukModeAdmin();
+      } else {
+        document.getElementById('loginErrorMsg').classList.remove('hidden');
+        document.getElementById('inputAdminPin').value = '';
+        document.getElementById('inputAdminPin').focus();
+      }
+    }
+
+    function simpanPinAdminBaru() {
+      const newPin = (document.getElementById('inputNewAdminPin').value || '').trim();
+      if (!/^\d{4,10}$/.test(newPin)) {
+        showToast('error', 'PIN Tidak Valid', 'PIN Admin harus berupa 4 hingga 10 digit angka.');
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY_PIN, newPin);
+      document.getElementById('inputNewAdminPin').value = '';
+      showToast('success', 'PIN Diperbarui', 'PIN Portal Admin baru berhasil disimpan.');
+    }
+
+    function masukModeAdmin() {
+      document.getElementById('employeeView').classList.add('hidden');
+      document.getElementById('adminView').classList.remove('hidden');
+      switchAdminTab('rekap');
+      renderAdminDashboard();
+      renderRiwayat();
+      renderAdminQuickNames();
+      updatePendingSyncBadge();
+      tarikDataDariCloudAdmin(false);
+    }
+
+    function keluarModeAdmin() {
+      document.getElementById('adminView').classList.add('hidden');
+      document.getElementById('employeeView').classList.remove('hidden');
+      renderQuickChipsKaryawan();
+    }
+
+    function switchAdminTab(tabName) {
+      document.querySelectorAll('.admin-section').forEach(sec => sec.classList.add('hidden'));
+      const targetSec = document.getElementById(`adminSection-${tabName}`);
+      if (targetSec) targetSec.classList.remove('hidden');
+
+      document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.className = 'admin-tab-btn py-2.5 px-2.5 rounded-xl text-blue-100 hover:bg-white/10 font-bold text-xs flex items-center justify-center space-x-1.5 transition';
+      });
+      const activeBtn = document.getElementById(`adminTabBtn-${tabName}`);
+      if (activeBtn) {
+        activeBtn.className = 'admin-tab-btn py-2.5 px-2.5 rounded-xl bg-white text-blue-950 font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition';
+      }
+
+      if (tabName === 'input') renderAdminInputChips();
+      if (tabName === 'rekap') renderAdminDashboard();
+      if (tabName === 'riwayat') renderRiwayat();
+      if (tabName === 'karyawan') renderAdminQuickNames();
+    }
+
+    function renderAdminInputChips() {
+      const container = document.getElementById('adminInputChipsContainer');
+      if (!container) return;
+      const { employees } = getDisplayChipsList();
+      const currentVal = (document.getElementById('adminInputNama')?.value || '').trim().toLowerCase();
+
+      container.innerHTML = employees.map(emp => {
+        const isActive = currentVal && emp.nama.toLowerCase() === currentVal;
+        const activeClass = isActive
+          ? 'bg-blue-900 text-white border-blue-900'
+          : 'bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200';
+        return `
+          <button type="button" onclick="pilihNamaInputAdmin('${escapeHTML(emp.nama).replace(/'/g, "\\'")}')"
+            class="px-3 py-1.5 rounded-full border text-xs font-bold transition ${activeClass}">
+            ${escapeHTML(emp.nama)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function pilihNamaInputAdmin(nama) {
+      document.getElementById('adminInputNama').value = nama;
+      sinkronHighlightChipAdmin();
+    }
+
+    function sinkronHighlightChipAdmin() {
+      renderAdminInputChips();
+    }
+
+    function pilihShiftAdmin(shiftName) {
+      selectedAdminShift = shiftName;
+      document.querySelectorAll('.admin-shift-card').forEach(card => {
+        const s = card.getAttribute('data-admin-shift');
+        if (s === shiftName) {
+          card.className = shiftName === 'Shift Off'
+            ? 'admin-shift-card text-left p-3 rounded-2xl border-2 border-rose-500 bg-rose-50/70 transition-all'
+            : 'admin-shift-card text-left p-3 rounded-2xl border-2 border-blue-600 bg-blue-50/70 transition-all';
+        } else {
+          card.className = 'admin-shift-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-400 transition-all';
+        }
+      });
+    }
+
+    async function simpanAbsenOlehAdmin() {
+      const tanggal = document.getElementById('adminInputTanggal').value;
+      const nama = formatTitleCase(document.getElementById('adminInputNama').value);
+
+      if (!tanggal) {
+        showToast('error', 'Tanggal Kosong', 'Pilih tanggal bertugas terlebih dahulu.');
+        return;
+      }
+      if (!nama || nama.length < 2) {
+        showToast('error', 'Nama Kosong', 'Ketik atau klik nama karyawan yang akan diabsenkan.');
+        document.getElementById('adminInputNama').focus();
+        return;
+      }
+      if (!selectedAdminShift) {
+        showToast('error', 'Pilih Shift', 'Pilih salah satu Shift 1, Shift 2, Shift 3, atau Shift Off.');
+        return;
+      }
+
+      const btn = document.getElementById('btnAdminSimpanAbsen');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Menyimpan...</span>`;
+
+      const jamInput = getCurrentTimeWITA();
+      const newEntry = {
+        id: 'abs-adm-' + Date.now(),
+        tanggal: tanggal,
+        jamInput: jamInput,
+        nama: nama,
+        shift: selectedAdminShift,
+        synced: false
+      };
+
+      const syncedOk = await kirimKeGoogleSheets(newEntry);
+      newEntry.synced = syncedOk;
+
+      const logs = getLogs();
+      logs.unshift(newEntry);
+      saveLogs(logs);
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i><span>Simpan Absen Karyawan</span>`;
+
+      pilihShiftAdmin('');
+      renderAdminDashboard();
+      renderRiwayat();
+      showToast('success', 'Absen Berhasil Diinput', `${nama} • ${newEntry.shift} (${formatTanggalIndo(tanggal)}) masuk ke rekap.`);
+    }
+
+    function renderAdminDashboard() {
+      const bulan = document.getElementById('filterBulanAdmin').value;
+      const tahun = document.getElementById('filterTahunAdmin').value;
+      const prefix = `${tahun}-${bulan}`;
+      const namaBulanList = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const labelBulan = `${namaBulanList[parseInt(bulan, 10) - 1]} ${tahun}`;
+
+      document.getElementById('labelPeriodeRekap').textContent = `Periode Laporan: ${labelBulan}`;
+
+      const filtered = getLogs().filter(item => item.tanggal.startsWith(prefix));
+      let totS1 = 0, totS2 = 0, totS3 = 0, totOff = 0;
+      const summaryMap = {};
+
+      filtered.forEach(item => {
+        const cleanName = formatTitleCase(item.nama);
+        if (!summaryMap[cleanName]) {
+          summaryMap[cleanName] = { nama: cleanName, s1: 0, s2: 0, s3: 0, off: 0 };
+        }
+        if (item.shift === 'Shift 1') { summaryMap[cleanName].s1++; totS1++; }
+        else if (item.shift === 'Shift 2') { summaryMap[cleanName].s2++; totS2++; }
+        else if (item.shift === 'Shift 3') { summaryMap[cleanName].s3++; totS3++; }
+        else if (item.shift === 'Shift Off') { summaryMap[cleanName].off++; totOff++; }
+      });
+
+      document.getElementById('statTotalCatatan').textContent = filtered.length;
+      document.getElementById('statShift1').textContent = totS1;
+      document.getElementById('statShift2').textContent = totS2;
+      document.getElementById('statShift3').textContent = totS3;
+      document.getElementById('statShiftOff').textContent = totOff;
+
+      const sortedRows = Object.values(summaryMap).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+      document.getElementById('badgeJumlahKaryawan').textContent = `${sortedRows.length} Karyawan`;
+
+      const tbody = document.getElementById('tabelRekapBody');
+      if (sortedRows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="py-10 px-4 text-center text-slate-400 text-xs">
+              Belum ada catatan absensi pada periode ${labelBulan}.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = sortedRows.map((row, index) => {
+        const totalMasuk = row.s1 + row.s2 + row.s3;
+        const totalSemua = totalMasuk + row.off;
+        return `
+          <tr class="hover:bg-slate-50/90 transition">
+            <td class="py-3 px-4 text-center font-bold text-slate-500">${index + 1}</td>
+            <td class="py-3 px-4 font-extrabold text-slate-800">${escapeHTML(row.nama)}</td>
+            <td class="py-3 px-3 text-center font-bold text-amber-700">${row.s1}</td>
+            <td class="py-3 px-3 text-center font-bold text-sky-700">${row.s2}</td>
+            <td class="py-3 px-3 text-center font-bold text-indigo-700">${row.s3}</td>
+            <td class="py-3 px-3 text-center font-bold text-rose-600">${row.off}</td>
+            <td class="py-3 px-4 text-center font-extrabold bg-blue-50/50 text-blue-900">${totalMasuk} Shift</td>
+            <td class="py-3 px-3 text-center font-bold bg-slate-50/80 text-slate-600">${totalSemua}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderRiwayat() {
+      const searchNama = (document.getElementById('filterCariNama').value || '').trim().toLowerCase();
+      const filterShift = document.getElementById('filterShiftLog').value;
+      const filterTgl = document.getElementById('filterTanggalLog').value;
+
+      const filtered = getLogs().filter(item => {
+        const matchNama = !searchNama || item.nama.toLowerCase().includes(searchNama);
+        const matchShift = !filterShift || item.shift === filterShift;
+        const matchTgl = !filterTgl || item.tanggal === filterTgl;
+        return matchNama && matchShift && matchTgl;
+      });
+
+      document.getElementById('badgeTotalLog').textContent = `${filtered.length} Catatan`;
+      const container = document.getElementById('riwayatListContainer');
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-3xl p-8 text-center border border-slate-200/80 text-slate-400 text-xs">
+            Tidak ada data riwayat yang sesuai dengan filter pencarian.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-extrabold text-sm text-slate-800">${escapeHTML(item.nama)}</span>
+              ${getShiftBadgeHTML(item.shift)}
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              <i class="fa-regular fa-calendar mr-1 text-blue-600"></i>${formatTanggalIndo(item.tanggal)}
+              <span class="mx-1.5">•</span>
+              <span class="font-mono">${escapeHTML(item.jamInput || '-')} WITA</span>
+              <span class="mx-1.5">•</span>
+              <span class="${item.synced ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}">
+                ${item.synced ? 'Terkirim ke Admin' : 'Tertunda'}
+              </span>
+            </p>
+          </div>
+          <button type="button" onclick="konfirmasiHapusBaris('${item.id}', '${escapeHTML(item.nama).replace(/'/g, "\\'")}', '${item.shift}')"
+            title="Hapus catatan"
+            class="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 transition">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function resetFilterRiwayat() {
+      document.getElementById('filterCariNama').value = '';
+      document.getElementById('filterShiftLog').value = '';
+      document.getElementById('filterTanggalLog').value = '';
+      renderRiwayat();
+    }
+
+    function konfirmasiHapusBaris(id, nama, shift) {
+      const modal = document.getElementById('deleteConfirmModal');
+      document.getElementById('deleteModalDesc').textContent = `Hapus catatan ${shift} atas nama ${nama}?`;
+      const btnConfirm = document.getElementById('btnConfirmDelete');
+      btnConfirm.onclick = () => {
+        const updated = getLogs().filter(item => item.id !== id);
+        saveLogs(updated);
+        tutupModalHapus();
+        renderRiwayat();
+        renderAdminDashboard();
+        showToast('info', 'Catatan Dihapus', `Data ${nama} (${shift}) telah dihapus.`);
+      };
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function tutupModalHapus() {
+      const modal = document.getElementById('deleteConfirmModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function downloadRekapCSV() {
+      const bulan = document.getElementById('filterBulanAdmin').value;
+      const tahun = document.getElementById('filterTahunAdmin').value;
+      const prefix = `${tahun}-${bulan}`;
+      const filtered = getLogs().filter(item => item.tanggal.startsWith(prefix));
+
+      if (filtered.length === 0) {
+        showToast('error', 'Data Kosong', 'Tidak ada data absensi untuk diekspor pada periode ini.');
+        return;
+      }
+
+      const summaryMap = {};
+      filtered.forEach(item => {
+        const cleanName = formatTitleCase(item.nama);
+        if (!summaryMap[cleanName]) {
+          summaryMap[cleanName] = { nama: cleanName, s1: 0, s2: 0, s3: 0, off: 0 };
+        }
+        if (item.shift === 'Shift 1') summaryMap[cleanName].s1++;
+        else if (item.shift === 'Shift 2') summaryMap[cleanName].s2++;
+        else if (item.shift === 'Shift 3') summaryMap[cleanName].s3++;
+        else if (item.shift === 'Shift Off') summaryMap[cleanName].off++;
+      });
+
+      const rows = Object.values(summaryMap).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+      let csv = 'No,Nama Karyawan,Shift 1,Shift 2,Shift 3,Shift Off,Total Kehadiran Masuk,Total Jadwal\n';
+      rows.forEach((r, idx) => {
+        const total = r.s1 + r.s2 + r.s3;
+        const totalSemua = total + r.off;
+        csv += `${idx + 1},"${r.nama.replace(/"/g, '""')}",${r.s1},${r.s2},${r.s3},${r.off},${total},${totalSemua}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Rekap_Absen_SPBU_7495710_${tahun}_${bulan}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('success', 'Ekspor Berhasil', 'File CSV rekap bulanan berhasil diunduh.');
+    }
+
+    // =========================================================================
+    // INISIALISASI APLIKASI SAAT HALAMAN DIMUAT
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      initAndroidPWA();
+      initQuickNamesIfNeeded();
+      initDefaultDate();
+      initScriptUrl();
+      startLiveClocks();
+      renderQuickChipsKaryawan();
+      updatePendingSyncBadge();
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'admin') {
+        bukaModalLoginAdmin();
+      }
+    });
+  </script>
+</body>
+</html>
